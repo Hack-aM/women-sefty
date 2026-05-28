@@ -1,0 +1,14 @@
+{
+  "name": "functions",
+  "description": "SafeHer Emergency Trigger Functions",
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^11.8.0",
+    "firebase-functions": "^4.3.1",
+    "twilio": "^4.19.0"
+  },
+  "private": true
+}

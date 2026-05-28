@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // ── Users ───────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read:  if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+
+      // Emergency contacts subcollection
+      match /contacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // ── SOS Alerts ──────────────────────────────────────────────────────────
+    match /sos_alerts/{alertId} {
+      // Anyone with the exact, high-entropy alert ID link can read the alert
+      allow read:   if true;
+      
+      allow create: if isAuthenticated()
+                    && request.resource.data.uid == request.auth.uid;
+                    
+      // Allow update if owner, OR if the alert is active (allowing contacts to update their status)
+      allow update: if (isAuthenticated() && resource.data.uid == request.auth.uid)
+                    || (resource.data.status == 'active');
+
+      // Breadcrumbs subcollection
+      match /breadcrumbs/{crumbId} {
+        allow read: if true;
+        allow write: if isAuthenticated() && get(/databases/$(database)/documents/sos_alerts/$(alertId)).data.uid == request.auth.uid;
+      }
+
+      // Logs subcollection
+      match /logs/{logId} {
+        allow read: if true;
+        allow write: if (isAuthenticated() && get(/databases/$(database)/documents/sos_alerts/$(alertId)).data.uid == request.auth.uid)
+                     || (get(/databases/$(database)/documents/sos_alerts/$(alertId)).data.status == 'active');
+      }
+    }
+
+    // ── Live Locations ──────────────────────────────────────────────────────
+    match /live_locations/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Incident Reports ────────────────────────────────────────────────────
+    match /incidents/{incidentId} {
+      allow create: if isAuthenticated()
+                    && request.resource.data.uid == request.auth.uid;
+      allow read:   if isAuthenticated()
+                    && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+    }
+
+    // ── FCM Tokens ──────────────────────────────────────────────────────────
+    match /fcm_tokens/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Admin Stats (read-only aggregation views) ────────────────────────────
+    // Stats are computed client-side; no separate collection needed.
+  }
+}
