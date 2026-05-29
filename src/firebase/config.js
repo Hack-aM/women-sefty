@@ -12,20 +12,41 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Guard: prevent crash if env vars are missing (demo mode)
-const hasConfig = Object.values(firebaseConfig).every(Boolean);
+// Check if any key is missing or contains placeholder values
+const isPlaceholder = (val) => {
+  if (!val) return true;
+  const s = String(val).toLowerCase();
+  return s.includes('your_') || s.includes('here') || s.includes('project_id') || s.includes('sender_id') || s.includes('app_id');
+};
+
+const hasConfig = Object.values(firebaseConfig).every(val => val && !isPlaceholder(val));
+
+let app = null;
+let auth = null;
+let db = null;
+let storage = null;
 
 if (!hasConfig) {
+  console.log('%c🛡️ [SafeHer] Firebase configuration is incomplete or contains placeholder keys. Running in Local Demo Mode.', 'color: #ea580c; font-weight: bold;');
   console.warn(
-    '[SafeHer] Firebase env vars missing. Running in demo mode. ' +
-    'Copy .env.example → .env and fill in your Firebase credentials.'
+    '[SafeHer] To run in Production Mode, copy .env.example -> .env and fill in real Firebase values.'
   );
+} else {
+  try {
+    console.log('%c✓ [SafeHer] Initializing Firebase in Production Mode.', 'color: #16a34a; font-weight: bold;');
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+  } catch (err) {
+    console.error('[SafeHer] Firebase initialization failed. Falling back to Demo Mode:', err);
+    app = null;
+    auth = null;
+    db = null;
+    storage = null;
+  }
 }
 
-const app = initializeApp(firebaseConfig);
-
-export const auth    = getAuth(app);
-export const db      = getFirestore(app);
-export const storage = getStorage(app);
-export { hasConfig };
+export { auth, db, storage, hasConfig };
 export default app;
+

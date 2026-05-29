@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Phone, Trash2, Edit3, User, X, Check, Star, MessageCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Phone, Trash2, Edit3, User, X, Check, Star, MessageCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { validatePhone } from '../utils/helpers';
 import GlassCard from '../components/ui/GlassCard';
@@ -138,7 +138,7 @@ function ContactModal({ contact, onClose, onSave }) {
 }
 
 export default function Contacts() {
-  const { contacts, loading, addNewContact, editContact, removeContact } = useContacts();
+  const { contacts, loading, error, fetchContacts, addNewContact, editContact, removeContact } = useContacts();
   const { currentLocation } = useApp();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -174,8 +174,26 @@ export default function Contacts() {
         </Button>
       </div>
 
+      {/* Error state */}
+      {!loading && error && (
+        <GlassCard className="border-red-500/25 bg-red-500/5 p-6 flex flex-col items-center gap-4 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <AlertTriangle size={24} className="text-red-400" />
+          </div>
+          <div>
+            <p className="text-slate-200 font-semibold text-base">Failed to load contacts</p>
+            <p className="text-slate-500 text-xs mt-1 leading-relaxed">
+              {error || 'An error occurred while communicating with the safety server.'}
+            </p>
+          </div>
+          <Button onClick={fetchContacts} size="sm" variant="ghost" className="border-white/10 flex items-center gap-2">
+            <RefreshCw size={14} /> Retry loading
+          </Button>
+        </GlassCard>
+      )}
+
       {/* Empty state */}
-      {!loading && contacts.length === 0 && (
+      {!loading && !error && contacts.length === 0 && (
         <div className="glass-card p-10 flex flex-col items-center gap-4 text-center">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/10 flex items-center justify-center">
             <User size={32} className="text-slate-500" />

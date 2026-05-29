@@ -6,6 +6,7 @@ import {
 import GlassCard from '../components/ui/GlassCard';
 import Button from '../components/ui/Button';
 import { useApp } from '../context/AppContext';
+import { getCurrentGPSLocation } from '../utils/location';
 import toast from 'react-hot-toast';
 
 const categories = ['All', 'Helplines', 'Police', 'Hospital', 'Women'];
@@ -97,13 +98,28 @@ const getNearbyResourcesList = (type, userLat, userLng) => {
 };
 
 export default function NearbyHelp() {
-  const { currentLocation } = useApp();
+  const { currentLocation, setLocation } = useApp();
   const [activeCategory, setActiveCategory] = useState('All');
   
   // Selection/Map view states
   const [selectedService, setSelectedService] = useState(null); // 'Police Stations' | 'Hospitals' | 'Safe Zones'
   const [places, setPlaces] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
+
+  // Auto-retrieve location on mount if not already present
+  useEffect(() => {
+    if (!currentLocation) {
+      console.log('[SafeHer NearbyHelp] No current location in AppContext. Fetching live GPS...');
+      getCurrentGPSLocation()
+        .then((coords) => {
+          console.log('[SafeHer NearbyHelp] GPS location auto-retrieved successfully:', coords);
+          setLocation(coords);
+        })
+        .catch((err) => {
+          console.warn('[SafeHer NearbyHelp] GPS location auto-retrieval failed, using Delhi fallback:', err.message);
+        });
+    }
+  }, [currentLocation, setLocation]);
   
   // Maps API states
   const [mapLoaded, setMapLoaded] = useState(false);
